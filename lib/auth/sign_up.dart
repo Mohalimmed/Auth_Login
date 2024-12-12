@@ -21,7 +21,6 @@ class _LoginState extends State<SignUp> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(forceMaterialTransparency: true,automaticallyImplyLeading: false,),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: ListView(
@@ -104,17 +103,11 @@ class _LoginState extends State<SignUp> {
                     }
                     return null;
                   },),
-                  Container(
-                    alignment: Alignment.topRight,
-                    padding: const EdgeInsets.only(top: 10, bottom: 20),
-                    child: const Text(
-                      'Forget Password ?',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                  ),
+
                 ],
               ),
             ),
+            SizedBox(height: 30,),
             CustomButton(text: 'Sign Up',onPressed: () async {
              if(formState.currentState!.validate()){
                try {
@@ -140,7 +133,8 @@ class _LoginState extends State<SignUp> {
                    title: 'Success',
                    desc: 'Sign Up Successfully',
                    btnOkOnPress: () {
-                     Navigator.of(context).pushReplacementNamed('home');
+                     FirebaseAuth.instance.currentUser!.sendEmailVerification();
+                     Navigator.of(context).pushReplacementNamed('Login');
                    },
                  ).show();
 

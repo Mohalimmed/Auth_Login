@@ -4,6 +4,7 @@ import 'package:auth_login/components/logo.dart';
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -17,14 +18,39 @@ class _LoginState extends State<Login> {
   TextEditingController email = TextEditingController();
   TextEditingController password = TextEditingController();
   GlobalKey<FormState> formState = GlobalKey<FormState>();
+
+
+  Future signInWithGoogle() async {
+    // Trigger the authentication flow
+    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+    if(googleUser == null){
+
+      return ;
+    }
+    // Obtain the auth details from the request
+    final GoogleSignInAuthentication? googleAuth = await googleUser?.authentication;
+
+    // Create a new credential
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth?.accessToken,
+      idToken: googleAuth?.idToken,
+    );
+
+    // Once signed in, return the UserCredential
+     await FirebaseAuth.instance.signInWithCredential(credential);
+    Navigator.of(context).pushNamedAndRemoveUntil('home', (route) => false );
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(forceMaterialTransparency: true,automaticallyImplyLeading: false,),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: ListView(
           children: [
+            const SizedBox(height: 30,),
             Form(
               key: formState,
               child: Column(
@@ -87,10 +113,71 @@ class _LoginState extends State<Login> {
                   },),
                   Container(
                     alignment: Alignment.topRight,
-                    padding: const EdgeInsets.only(top: 10, bottom: 20),
-                    child: const Text(
-                      'Forget Password ?',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    padding: const EdgeInsets.only(top: 10, bottom: 10),
+                    child: TextButton(
+                      onPressed: () async {
+                        if (email.text.trim().isEmpty) {
+                          AwesomeDialog(
+                            context: context,
+                            dialogType: DialogType.error,
+                            animType: AnimType.rightSlide,
+                            title: 'Error',
+                            desc: 'Please write the email first and then click the forget password',
+                            btnOkOnPress: () {},
+                          ).show();
+                          return;
+                        }
+
+                        try {
+                          await FirebaseAuth.instance.sendPasswordResetEmail(email: email.text.trim());
+                          AwesomeDialog(
+                            context: context,
+                            dialogType: DialogType.success,
+                            animType: AnimType.rightSlide,
+                            title: 'Success',
+                            desc: 'Email has been sent to you. Please check and reset your password',
+                            btnOkOnPress: () {},
+                          ).show();
+                        } on FirebaseAuthException catch (e) {
+                          String errorMessage = '';
+
+                          switch (e.code) {
+                            case 'invalid-email':
+                              errorMessage = 'The email address is badly formatted';
+                              break;
+                            case 'user-not-found':
+                              errorMessage = 'No user found with this email address';
+                              break;
+                            case 'too-many-requests':
+                              errorMessage = 'Too many requests. Try again later';
+                              break;
+                            default:
+                              errorMessage = 'An error occurred. Please try again';
+                          }
+
+                          AwesomeDialog(
+                            context: context,
+                            dialogType: DialogType.error,
+                            animType: AnimType.rightSlide,
+                            title: 'Error',
+                            desc: errorMessage,
+                            btnOkOnPress: () {},
+                          ).show();
+                        } catch (e) {
+                          AwesomeDialog(
+                            context: context,
+                            dialogType: DialogType.error,
+                            animType: AnimType.rightSlide,
+                            title: 'Error',
+                            desc: 'An unexpected error occurred. Please try again',
+                            btnOkOnPress: () {},
+                          ).show();
+                        }
+                      },
+                      child: const Text(
+                        'Forget Password ?',
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
                     ),
                   ),
                 ],
@@ -117,16 +204,35 @@ class _LoginState extends State<Login> {
                       email: email.text,
                       password: password.text
                   );
-                  AwesomeDialog(
-                    context: context,
-                    dialogType: DialogType.success,
-                    animType: AnimType.rightSlide,
-                    title: 'Success',
-                    desc: 'Login Successful',
-                    btnOkOnPress: () {
-                      Navigator.of(context).pushReplacementNamed('home');
-                    },
-                  ).show();
+
+                  // Check verification status first
+                  if (credential.user!.emailVerified) {
+                    // If verified, show success and navigate
+                    AwesomeDialog(
+                      context: context,
+                      dialogType: DialogType.success,
+                      animType: AnimType.rightSlide,
+                      title: 'Success',
+                      desc: 'Login Successful',
+                      btnOkOnPress: () {
+                        Navigator.of(context).pushReplacementNamed('home');
+                      },
+                    ).show();
+                  } else {
+                    // If not verified, show error
+                    AwesomeDialog(
+                      context: context,
+                      dialogType: DialogType.error,
+                      animType: AnimType.rightSlide,
+                      title: 'Email Not Verified',
+                      desc: 'Please check your email and click the verification link',
+                      btnOkOnPress: () {
+                        // Optional: You can add option to resend verification email
+                        credential.user?.sendEmailVerification();
+                      },
+                      btnOkText: 'Resend Verification Email',
+                    ).show();
+                  }
 
                 } on FirebaseAuthException catch (e) {
                   String errorMessage = 'An error occurred';
@@ -138,6 +244,7 @@ class _LoginState extends State<Login> {
                   } else if (e.code == 'invalid-email') {
                     errorMessage = 'Invalid email format';
                   }
+
                   AwesomeDialog(
                     context: context,
                     dialogType: DialogType.error,
@@ -161,7 +268,9 @@ class _LoginState extends State<Login> {
             ),
             const SizedBox(height: 10,),
             MaterialButton(
-              onPressed: () {},
+              onPressed: () {
+                signInWithGoogle();
+              },
               height: 40,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20)),
