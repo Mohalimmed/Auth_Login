@@ -1,5 +1,6 @@
 import 'package:auth_login/auth/login.dart';
 import 'package:auth_login/auth/sign_up.dart';
+import 'package:auth_login/categories/addcategories.dart';
 import 'package:auth_login/home.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -43,6 +44,7 @@ class _MyAppState extends State<MyApp> {
         'SignUp' : (context) => const SignUp(),
         'Login' : (context) => const Login(),
         'home' : (context) => const Home(),
+        'addCategory' : (context) => const AddCategories(),
       },
     );
   }
