@@ -4,27 +4,30 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-class AddCategories extends StatefulWidget {
-  const AddCategories({super.key});
-
+class EditCategories extends StatefulWidget {
+  final String id;
+  final String oldName;
+  const EditCategories({super.key, required this.id, required this.oldName});
   @override
-  State<AddCategories> createState() => _AddCategoriesState();
+  State<EditCategories> createState() => _EditCategoriesState();
+
+
+
 }
 
-class _AddCategoriesState extends State<AddCategories> {
+class _EditCategoriesState extends State<EditCategories> {
   GlobalKey<FormState> formState = GlobalKey<FormState>();
   TextEditingController textEditingController = TextEditingController();
 
   CollectionReference categories =
-      FirebaseFirestore.instance.collection('categories');
+  FirebaseFirestore.instance.collection('categories');
 
-  addCategories() async {
+  editCategories() async {
     if (formState.currentState!.validate()) {
       try {
-        DocumentReference reference =
-            await categories.add({'name': textEditingController.text,
-            'id' : FirebaseAuth.instance.currentUser!.uid
-            });
+        await categories.doc(widget.id).update({
+          'name' : textEditingController.text
+        });
         print("category Added");
         Navigator.of(context).pushReplacementNamed('home');
       } catch (e) {
@@ -32,8 +35,13 @@ class _AddCategoriesState extends State<AddCategories> {
       }
     }
   }
+@override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
 
-
+    textEditingController.text = widget.oldName;
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -62,7 +70,7 @@ class _AddCategoriesState extends State<AddCategories> {
               CustomButton(
                 text: 'Add',
                 onPressed: () {
-                  addCategories();
+                  editCategories();
                 },
               )
             ],
